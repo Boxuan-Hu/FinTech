@@ -17,6 +17,7 @@ public final class LoanApplication {
     private User borrower;
     private long repaymentTerm;
     private double interestRate;
+    private Status status;
 
     public LoanApplication() {
     }
@@ -26,10 +27,18 @@ public final class LoanApplication {
         this.borrower = borrower;
         this.repaymentTerm = repaymentTerm;
         this.interestRate = interestRate;
+        this.status = Status.ONGOING;
     }
 
-    public int getAmount() {
-        return amount;
+    public Loan acceptLoanApplication(final User lender) {
+        lender.withdraw(getAmount());
+        borrower.topUp(getAmount());
+        status = Status.COMPLETED;
+        return new Loan(lender, this);
+    }
+
+    public Money getAmount() {
+        return new Money(amount, Currency.USD);
     }
 
     public long getRepaymentTerm() {

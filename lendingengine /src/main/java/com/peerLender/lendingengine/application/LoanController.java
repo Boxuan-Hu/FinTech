@@ -1,10 +1,12 @@
 package com.peerLender.lendingengine.application;
 
+import com.peerLender.lendingengine.application.model.LoanPaymentRequest;
 import com.peerLender.lendingengine.application.model.LoanRequest;
 import com.peerLender.lendingengine.application.service.TokenValidateService;
 import com.peerLender.lendingengine.domain.exception.UserNotFoundException;
 import com.peerLender.lendingengine.domain.model.Loan;
 import com.peerLender.lendingengine.domain.model.LoanApplication;
+import com.peerLender.lendingengine.domain.model.Status;
 import com.peerLender.lendingengine.domain.model.User;
 import com.peerLender.lendingengine.domain.repository.LoanApplicationRepository;
 import com.peerLender.lendingengine.domain.repository.UserRepository;
@@ -47,25 +49,25 @@ public class LoanController {
     }
 
     @PostMapping(value = "/loan/accept/{loanApplicationId}")
-    public void acceptLoan(final String loanApplicationId,
-                           final String lenderUsername,
+    public void acceptLoan(@PathVariable String loanApplicationId,
                            HttpServletRequest request) {
         User lender =
-                userRepository.findById(lenderUsername).orElseThrow(() -> new UserNotFoundException(lenderUsername));
-        tokenValidateService.validateTokenAndGetUser(request.getHeader(HttpHeaders.AUTHORIZATION));
+                tokenValidateService.validateTokenAndGetUser(request.getHeader(HttpHeaders.AUTHORIZATION));
+
         loanService.acceptLoan(Long.parseLong(loanApplicationId), lender.getUsername());
     }
 
-    @GetMapping(value = "/users")
-    public List<User> findUsers(HttpServletRequest request) {
-        tokenValidateService.validateTokenAndGetUser(request.getHeader(HttpHeaders.AUTHORIZATION));
-        return userRepository.findAll();
+    @PostMapping(value = "/loan/repay")
+    public void repayLoan(@RequestBody LoanPaymentRequest request,
+                          @RequestHeader String authorization) {
+        User borrower = tokenValidateService.validateTokenAndGetUser(authorization);
+        loanService.repayLoan(request.getAmount(), request.getLongId(), borrower);
     }
 
     @GetMapping(value = "/loan/requests")
     public List<LoanApplication> findLoanApplications(HttpServletRequest request) {
         tokenValidateService.validateTokenAndGetUser(request.getHeader(HttpHeaders.AUTHORIZATION));
-        return loanApplicationRepository.findAll();
+        return loanApplicationRepository.findAllByStatusEquals(Status.ONGOING);
     }
 
     @GetMapping(value = "/loans")
@@ -73,4 +75,21 @@ public class LoanController {
         tokenValidateService.validateTokenAndGetUser(request.getHeader(HttpHeaders.AUTHORIZATION));
         return loanService.getLoans();
     }
+
+    @GetMapping(value = "/loan/{status}/borrowed")
+    public List<Loan> findBorrowedLoans(@RequestHeader String authorization,
+                                        @PathVariable Status status) {
+        User borrower = tokenValidateService.validateTokenAndGetUser(authorization);
+        return loanService.findAllBorrowedLoans(borrower, status);
+    }
+
+    @GetMapping(value = "/loan/{status}/lent")
+    public List<Loan> findLentLoans(@RequestHeader String authorization,
+                                    @PathVariable Status status) {
+        User lender = tokenValidateService.validateTokenAndGetUser(authorization);
+        return loanService.findAllLentLoans(lender, status);
+    }
+
+
+
 }
