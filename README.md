@@ -1,1 +1,1 @@
-# Reddit-Android-Java
+# Fintech application
